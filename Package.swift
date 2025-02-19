@@ -31,6 +31,10 @@ let package = Package(
                 .landscapeRight,
                 .landscapeLeft,
                 .portraitUpsideDown(.when(deviceFamilies: [.pad]))
+            ],
+            capabilities: [
+                .camera(purposeString: "To add instant moments in capsule"),
+                .microphone(purposeString: "To record voice notes")
             ]
         )
     ],
