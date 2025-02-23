@@ -103,7 +103,6 @@ struct AddCapsuleView: View {
             }
         }
     }
-    
     private func saveCapsule() {
         guard !title.isEmpty else { return }
         
@@ -118,27 +117,37 @@ struct AddCapsuleView: View {
     }
     
     private func startRecording() {
-        let filename = "voice_\(title).m4a"
+        let filename = "voice_\(UUID().uuidString).m4a"
         let fileURL = manager.documentsDirectory.appendingPathComponent(filename)
-        
-        print("Starting recording at URL: \(fileURL.path)")
-        
+
+        print("🎤 Starting recording at: \(fileURL.path)")
+
         let settings: [String: Any] = [
             AVFormatIDKey: kAudioFormatMPEG4AAC,
-            AVSampleRateKey: 44100,
-            AVNumberOfChannelsKey: 2,
+            AVSampleRateKey: 44100.0,
+            AVNumberOfChannelsKey: 1,
             AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
         ]
-        
+
         do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playAndRecord, mode: .default, options: .defaultToSpeaker)
+            try session.setActive(true)
+
             audioRecorder = try AVAudioRecorder(url: fileURL, settings: settings)
             audioRecorder?.record()
+
+            if audioRecorder?.isRecording == true {
+                print("✅ Recording started successfully")
+            } else {
+                print("❌ Recording failed to start")
+            }
+
             recording = true
             mediaURL = fileURL
-            print(mediaURL?.path ?? "No url")
             startTimer()
         } catch {
-            print("Failed to start recording: \(error)")
+            print("🚨 Failed to start recording: \(error.localizedDescription)")
         }
     }
     
@@ -146,15 +155,27 @@ struct AddCapsuleView: View {
         audioRecorder?.stop()
         recording = false
         stopTimer()
-        if let url = mediaURL {
-            let fileManager = FileManager.default
-            if fileManager.fileExists(atPath: url.path) {
-                print("File exists at: \(url.path)")
-            } else {
-                print("File does not exist at: \(url.path)")
+
+        guard let url = mediaURL else { return }
+
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: url.path) {
+            do {
+                let attributes = try fileManager.attributesOfItem(atPath: url.path)
+                if let fileSize = attributes[.size] as? Int {
+                    print("✅ File exists at: \(url.path), Size: \(fileSize) bytes")
+                    if fileSize < 1000 {
+                        print("🚨 WARNING: File is too small, likely corrupted")
+                    }
+                }
+            } catch {
+                print("❌ Error getting file attributes: \(error)")
             }
+        } else {
+            print("❌ File does NOT exist at: \(url.path)")
         }
     }
+    
     private func startTimer() {
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             DispatchQueue.main.async {

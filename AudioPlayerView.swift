@@ -1,28 +1,54 @@
-import AVKit
 import SwiftUI
+import AVFoundation
+
+@MainActor
+class AudioPlayerViewModel: ObservableObject {
+    @Published var isPlaying = false
+    private var audioPlayer: AVAudioPlayer?
+
+    init(audioURL: URL) {
+        do {
+            #if targetEnvironment(simulator)
+            print("🎵 Running in Simulator - AVAudioSession won't work, but playback should.")
+            #endif
+            self.audioPlayer = try AVAudioPlayer(contentsOf: audioURL)
+            self.audioPlayer?.prepareToPlay()
+        } catch {
+            print("🚨 Failed to load audio: \(error.localizedDescription)")
+        }
+    }
+
+    func playOrPause() {
+        guard let player = audioPlayer else { return }
+
+        if player.isPlaying {
+            player.pause()
+            isPlaying = false
+        } else {
+            player.play()
+            isPlaying = true
+        }
+    }
+}
 
 struct AudioPlayerView: View {
-    let audioURL: URL
-    @State private var player: AVPlayer?
+    @StateObject private var audioPlayerViewModel: AudioPlayerViewModel
+
+    init(audioURL: URL) {
+        _audioPlayerViewModel = StateObject(wrappedValue: AudioPlayerViewModel(audioURL: audioURL))
+    }
 
     var body: some View {
         VStack {
-            if let player = player {
-                VideoPlayer(player: player)
-                    .frame(height: 50)
-                    .onAppear {
-                        player.play()
-                    }
-            } else {
-                Button("Play Audio") {
-                    player = AVPlayer(url: audioURL)
-                    player?.play()
-                }
-                .padding()
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(10)
+            Button(action: {
+                audioPlayerViewModel.playOrPause()
+            }) {
+                Image(systemName: audioPlayerViewModel.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                    .resizable()
+                    .frame(width: 32, height: 32)
+                    .foregroundColor(.blue)
             }
         }
+        .padding()
     }
 }

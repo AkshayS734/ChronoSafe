@@ -6,7 +6,7 @@ struct WelcomeView: View {
     var body: some View {
         VStack {
             Spacer()
-            Text("Welcome to Time Capsule!")
+            Text("Welcome to ChronoSafe!")
                 .font(.system(size: 40, weight: .bold, design: .rounded))
                 .foregroundColor(.green)
                 .padding(.bottom, 20)

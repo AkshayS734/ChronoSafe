@@ -60,7 +60,6 @@ struct CapsuleDetailView: View {
                 case .audio:
                     
                     Text("Audio URL: \(mediaURL)")
-//                    AudioPlayer(mediaURL: URL(filePath: "/var/mobile/Containers/Data/Application/C10D7148-69D3-4190-92CA-126CBF260E30/Documents/voice_0E4695A3-A67A-424B-A695-4B8DB66AF5E8.m4a"))
                     AudioPlayerView(audioURL: mediaURL)
                 default:
                     Text("Unsupported media type.")
@@ -100,25 +99,3 @@ private let dateFormatter: DateFormatter = {
     return formatter
 }()
 
-// AudioPlayer to handle playing the audio
-struct AudioPlayer: View {
-    let mediaURL: URL
-
-    var body: some View {
-        VStack {
-            Text("Voice Note")
-            Button(action: {
-                playAudio(from: mediaURL)
-            }) {
-                Text("Play Voice Note")
-                    .font(.headline)
-                    .foregroundColor(.blue)
-            }
-        }
-    }
-
-    private func playAudio(from url: URL) {
-        let player = AVPlayer(url: url)
-        player.play()
-    }
-}
