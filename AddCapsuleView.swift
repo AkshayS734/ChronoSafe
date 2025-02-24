@@ -20,99 +20,99 @@ struct AddCapsuleView: View {
     
     var body: some View {
         NavigationView {
-            Form {
-                TextField("Title", text: $title)
-                DatePicker("Unlock Date", selection: $unlockDate)
-                
-                Picker("Select Item type", selection: $mediaType) {
-                    Text("Message").tag(TimeCapsule.MediaType.message)
-                    Text("Image").tag(TimeCapsule.MediaType.image)
-                    Text("Video").tag(TimeCapsule.MediaType.video)
-                    Text("Voice Note").tag(TimeCapsule.MediaType.audio)
-                }
-                
-                if mediaType == .image {
-                    Button("Capture Image") {
-                        showCameraPicker = true
-                    }
-                } else if mediaType == .video {
-                    Button("Record Video") {
-                        showVideoPicker = true
-                    }
-                } else if mediaType == .audio {
-                    VStack {
-                        Button(recording ? "Stop Recording" : "Record Voice Note") {
-                            recording ? stopRecording() : startRecording()
+            ScrollView {
+                VStack(spacing: 20) {
+                    Text("Create a Time Capsule")
+                        .font(.title)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.teal)
+//                        .padding(.top, 20)
+
+                    VStack(spacing: 15) {
+                        TextField("Capsule Title", text: $title)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .padding()
+                            .background(Color.white)
+                            .cornerRadius(12)
+                            .shadow(radius: 3)
+
+                        DatePicker("Unlock Date", selection: $unlockDate)
+                            .datePickerStyle(.graphical)
+                            .padding()
+                            .background(Color.white)
+                            .cornerRadius(12)
+                            .shadow(radius: 3)
+
+                        Picker("Select Type", selection: $mediaType) {
+                            Text("Message").tag(TimeCapsule.MediaType.message)
+                            Text("Image").tag(TimeCapsule.MediaType.image)
+                            Text("Video").tag(TimeCapsule.MediaType.video)
+                            Text("Voice Note").tag(TimeCapsule.MediaType.audio)
                         }
-                        if recording {
-                            Text("Recording: \(formattedElapsedTime())")
-                                .font(.headline)
-                                .foregroundColor(.red)
-                        }
+                        .pickerStyle(SegmentedPickerStyle())
+                        .padding(.vertical)
                     }
-                } else {
-                    TextEditor(text: $message)
-                        .frame(minHeight: 40, maxHeight: 100)
-                        .background(Color.clear)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-                if let mediaURL = mediaURL {
+                    .padding()
+//                    .background(Color.blue.opacity(0.2))
+//                    .cornerRadius(15)
+//                    .padding(.horizontal)
+//                    .padding(.bottom)
+
                     if mediaType == .image {
-                        if let imageData = try? Data(contentsOf: mediaURL),
-                           let uiImage = UIImage(data: imageData) {
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(height: 200)
-                                .cornerRadius(10)
-                        }
+                        CapsuleButton(title: "Capture Image", action: { showCameraPicker = true })
                     } else if mediaType == .video {
-                        VideoPlayer(player: AVPlayer(url: mediaURL))
-                            .frame(height: 200)
-                            .cornerRadius(10)
+                        CapsuleButton(title: "Record Video", action: { showVideoPicker = true })
                     } else if mediaType == .audio {
-                        AudioPlayerView(audioURL: mediaURL)
-                            .frame(height: 50)
+                        VStack {
+                            CapsuleButton(title: recording ? "Stop Recording" : "Record Voice Note", action: {
+                                recording ? stopRecording() : startRecording()
+                            })
+                            if recording {
+                                Text("Recording: \(formattedElapsedTime())")
+                                    .font(.headline)
+                                    .foregroundColor(.red)
+                            }
+                        }
+                    } else {
+                        TextEditor(text: $message)
+                            .frame(minHeight: 100, maxHeight: 150)
+                            .padding()
+                            .background(Color.white)
+                            .cornerRadius(12)
+                            .shadow(radius: 3)
                     }
+
+                    if let mediaURL = mediaURL {
+                        CapsuleMediaPreview(mediaType: mediaType, mediaURL: mediaURL)
+                    }
+
+                    Spacer()
                 }
+                .padding()
             }
-            .navigationTitle("New Time Capsule")
+            .background(Color(.systemGray6))
+            .navigationTitle("")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        presentationMode.wrappedValue.dismiss()
-                    }
+                    Button("Cancel") { presentationMode.wrappedValue.dismiss() }
                 }
-                
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        saveCapsule()
-                    }
-                    .disabled(title.isEmpty)
+                    Button("Save") { saveCapsule() }.disabled(title.isEmpty)
                 }
             }
             .sheet(isPresented: $showCameraPicker) {
-                CameraPicker(mediaType: .image, onCapture: { url in
-                    mediaURL = url
-                })
+                CameraPicker(mediaType: .image, onCapture: { url in mediaURL = url })
             }
             .sheet(isPresented: $showVideoPicker) {
-                CameraPicker(mediaType: .video, onCapture: { url in
-                    mediaURL = url
-                })
+                CameraPicker(mediaType: .video, onCapture: { url in mediaURL = url })
             }
         }
     }
+    
     private func saveCapsule() {
         guard !title.isEmpty else { return }
-        
-        manager.addCapsule(
-            title: title,
-            unlockDate: unlockDate,
-            mediaType: mediaType,
-            mediaURL: mediaURL,
-            message: mediaType == .message ? message : nil
-        )
+        print("Saving media URL :", mediaURL?.absoluteString ?? "No URL")
+        manager.addCapsule(title: title, unlockDate: unlockDate, mediaType: mediaType, mediaURL: mediaURL, message: mediaType == .message ? message : nil)
         presentationMode.wrappedValue.dismiss()
     }
     
@@ -120,34 +120,27 @@ struct AddCapsuleView: View {
         let filename = "voice_\(UUID().uuidString).m4a"
         let fileURL = manager.documentsDirectory.appendingPathComponent(filename)
 
-        print("🎤 Starting recording at: \(fileURL.path)")
-
         let settings: [String: Any] = [
             AVFormatIDKey: kAudioFormatMPEG4AAC,
             AVSampleRateKey: 44100.0,
             AVNumberOfChannelsKey: 1,
-            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue 
         ]
 
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playAndRecord, mode: .default, options: .defaultToSpeaker)
-            try session.setActive(true)
+            try session.setCategory(.playAndRecord, mode: .spokenAudio, options: .defaultToSpeaker)
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
 
             audioRecorder = try AVAudioRecorder(url: fileURL, settings: settings)
+            audioRecorder?.prepareToRecord()
             audioRecorder?.record()
-
-            if audioRecorder?.isRecording == true {
-                print("✅ Recording started successfully")
-            } else {
-                print("❌ Recording failed to start")
-            }
-
+            
             recording = true
             mediaURL = fileURL
             startTimer()
         } catch {
-            print("🚨 Failed to start recording: \(error.localizedDescription)")
+            print("Failed to start recording: \(error.localizedDescription)")
         }
     }
     
@@ -156,23 +149,20 @@ struct AddCapsuleView: View {
         recording = false
         stopTimer()
 
-        guard let url = mediaURL else { return }
+        do {
+            try AVAudioSession.sharedInstance().setActive(false)
+        } catch {
+            print("Failed to deactivate audio session:", error.localizedDescription)
+        }
 
-        let fileManager = FileManager.default
-        if fileManager.fileExists(atPath: url.path) {
-            do {
-                let attributes = try fileManager.attributesOfItem(atPath: url.path)
-                if let fileSize = attributes[.size] as? Int {
-                    print("✅ File exists at: \(url.path), Size: \(fileSize) bytes")
-                    if fileSize < 1000 {
-                        print("🚨 WARNING: File is too small, likely corrupted")
-                    }
-                }
-            } catch {
-                print("❌ Error getting file attributes: \(error)")
+        if let mediaURL = mediaURL {
+            if FileManager.default.fileExists(atPath: mediaURL.path) {
+                print("Audio file exists at :", mediaURL.absoluteString)
+            } else {
+                print("Audio file missing!")
             }
         } else {
-            print("❌ File does NOT exist at: \(url.path)")
+            print("mediaURL is nil")
         }
     }
     
@@ -183,18 +173,72 @@ struct AddCapsuleView: View {
             }
         }
     }
-
+    
     private func stopTimer() {
         timer?.invalidate()
         timer = nil
     }
-
+    
     private func formattedElapsedTime() -> String {
         let minutes = elapsedTime / 60
         let seconds = elapsedTime % 60
         return String(format: "%02d:%02d", minutes, seconds)
     }
 }
+
+struct CapsuleButton: View {
+    var title: String
+    var action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.headline)
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(.teal)
+                .foregroundColor(.white)
+                .clipShape(Capsule())
+                .shadow(radius: 3)
+        }
+        .padding(.horizontal)
+    }
+}
+
+struct CapsuleMediaPreview: View {
+    let mediaType: TimeCapsule.MediaType
+    let mediaURL: URL?
+    
+    var body: some View {
+        if let mediaURL = mediaURL, FileManager.default.fileExists(atPath: mediaURL.path) {
+            switch mediaType {
+            case .image:
+                if let image = UIImage(contentsOfFile: mediaURL.path) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .cornerRadius(10)
+                }
+                
+            case .video:
+                VideoPlayer(player: AVPlayer(url: mediaURL))
+                    .frame(height: 200)
+                    .cornerRadius(10)
+                
+            case .audio:
+                AudioPlayerView(audioURL: mediaURL)
+                    .padding()
+                    .background(Color.white)
+                    .cornerRadius(10)
+                    .shadow(radius: 3)
+                
+            default:
+                EmptyView()
+            }
+        }
+    }
+}
+
 
 struct CameraPicker: UIViewControllerRepresentable {
     let mediaType: TimeCapsule.MediaType

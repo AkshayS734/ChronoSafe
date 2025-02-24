@@ -15,7 +15,6 @@ struct TimeCapsule: Identifiable, Codable {
     }
 }
 
-
 class TimeCapsuleManager: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
     @Published var capsules: [TimeCapsule] = []
     let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
@@ -111,30 +110,5 @@ class TimeCapsuleManager: NSObject, ObservableObject, UNUserNotificationCenterDe
         } catch {
             print("Error cleaning up media files: \(error)")
         }
-    }
-    
-    // MARK: - Audio Recording Functions
-    func startRecording() {
-        let audioFilename = documentsDirectory.appendingPathComponent("\(UUID().uuidString).m4a")
-        let settings: [String: Any] = [
-            AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-            AVSampleRateKey: 12000,
-            AVNumberOfChannelsKey: 1,
-            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
-        ]
-        
-        do {
-            audioRecorder = try AVAudioRecorder(url: audioFilename, settings: settings)
-            audioRecorder?.record()
-        } catch {
-            print("Failed to start recording: \(error)")
-        }
-    }
-    
-    func stopRecording() -> URL? {
-        audioRecorder?.stop()
-        let recordedURL = audioRecorder?.url
-        audioRecorder = nil
-        return recordedURL
     }
 }
